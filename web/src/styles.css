@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.kpi-card {
+  @apply bg-white rounded-xl p-4 shadow-sm border border-slate-200;
+}

@@ -1,0 +1,61 @@
+{
+  "name": "desktop-agent",
+  "version": "1.0.7",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron .",
+    "build:renderer": "npm --workspace desktop-renderer run build",
+    "dist:win": "npm run build:renderer && set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-builder --win nsis",
+    "dist:portable": "npm run build:renderer && set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-builder --win portable"
+  },
+  "dependencies": {
+    "active-win": "^8.1.0",
+    "auto-launch": "^5.0.6",
+    "axios": "^1.8.4",
+    "electron-log": "^5.2.4",
+    "keytar": "^7.9.0",
+    "screenshot-desktop": "^1.15.1",
+    "sharp": "^0.34.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "7zip-bin": "^5.2.0",
+    "electron": "31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.hybridworkforce.agent",
+    "productName": "Hybrid Workforce Agent",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "tracker.js",
+      "sync.js",
+      "agent.config.json",
+      "renderer/dist/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "signAndEditExecutable": false,
+      "artifactName": "Hybrid-Workforce-Agent-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

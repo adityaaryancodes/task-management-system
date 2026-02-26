@@ -1,0 +1,13 @@
+{
+  "name": "hybrid-workforce-platform",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["server", "desktop", "desktop/renderer", "web"],
+  "scripts": {
+    "dev:server": "npm --workspace server run dev",
+    "dev:web": "npm --workspace web run dev",
+    "dev:desktop": "npm --workspace desktop run dev",
+    "dev:desktop:ui": "npm --workspace desktop-renderer run dev",
+    "build:web": "npm --workspace web run build"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "apiBaseUrl": "http://localhost:4001",
+  "desktopUiUrl": "http://localhost:5174",
+  "allowedApps": ["visual studio code", "google chrome", "canva"],
+  "blockedWindowKeywords": ["youtube", "whatsapp"],
+  "policyAlertCooldownSeconds": 300,
+  "policyScreenshotCooldownSeconds": 60
+}

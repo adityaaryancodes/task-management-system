@@ -1,0 +1,14 @@
+﻿node_modules/
+.env
+.env.*
+dist/
+coverage/
+.DS_Store
+*.log
+server/uploads/
+web/dist/
+desktop/renderer/dist/
+desktop/release/
+desktop/release-*/
+desktop/**/win-unpacked/
+web/public/downloads/*.exe

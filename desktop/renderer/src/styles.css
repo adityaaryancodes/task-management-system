@@ -1,0 +1,164 @@
+* {
+  box-sizing: border-box;
+  font-family: Segoe UI, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #f3f8ff, #dbe9ff);
+}
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(23, 43, 77, 0.15);
+}
+
+.card.wide {
+  max-width: 760px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.pill.on {
+  background: #e8fff0;
+  color: #056031;
+}
+
+.pill.off {
+  background: #fff2f2;
+  color: #8e1d1d;
+}
+
+form,
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+input,
+button {
+  border-radius: 10px;
+  border: 1px solid #ccd9f1;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+button {
+  background: #0957d0;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #eef4ff;
+  color: #15315f;
+}
+
+button.small {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.meta {
+  font-size: 13px;
+  color: #445c83;
+  margin-bottom: 4px;
+}
+
+.task-panel {
+  border: 1px solid #dce7fb;
+  background: #f7faff;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.task-header h2 {
+  margin: 0;
+  font-size: 16px;
+  color: #1f335e;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.task-item {
+  border: 1px solid #d0def7;
+  border-radius: 10px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.task-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #12284f;
+}
+
+.task-desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #39527d;
+}
+
+.task-meta {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #5f749a;
+}
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.task-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #5f749a;
+}
+
+.task-error {
+  margin: 0 0 8px;
+  color: #b52d2d;
+  font-size: 12px;
+}
