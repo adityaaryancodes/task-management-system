@@ -24,7 +24,7 @@ function loadAppConfig() {
 }
 
 const appConfig = loadAppConfig();
-const API_BASE_URL = process.env.API_BASE_URL || appConfig.apiBaseUrl || 'http://localhost:4001';
+const API_BASE_URL = (process.env.API_BASE_URL || appConfig.apiBaseUrl || 'https://task-management-system-1-jsam.onrender.com').replace(/\/+$/, '');
 const DESKTOP_UI_URL = process.env.DESKTOP_UI_URL || appConfig.desktopUiUrl || 'http://localhost:5174';
 const queuePath = path.join(app.getPath('userData'), 'queue.json');
 const devicePath = path.join(app.getPath('userData'), 'device.json');
