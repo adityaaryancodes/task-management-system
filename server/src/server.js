@@ -1,13 +1,12 @@
-import app from './app.js';
+﻿import app from './app.js';
 import { pool } from './config/db.js';
 import { startNightlyAggregation } from './jobs/nightlyAggregation.js';
 import { initPolicyAlertsWebSocket } from './realtime/policyAlertsWs.js';
 
-const PORT = Number(process.env.PORT || 10000);
-const HOST = '0.0.0.0';
+const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, HOST, () => {
-  console.log(`Server listening on ${HOST}:${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 const wsServer = initPolicyAlertsWebSocket(server);
@@ -16,7 +15,7 @@ startNightlyAggregation();
 
 let isShuttingDown = false;
 const shutdown = async (signal) => {
-  if (isShuttingDown) return;
+  if (isShuttingDown) return;cv
   isShuttingDown = true;
   console.log(`Received ${signal}. Shutting down server`);
 
