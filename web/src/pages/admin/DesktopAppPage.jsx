@@ -3,7 +3,7 @@ export function DesktopAppPage() {
     <div className="space-y-4">
       <div className="kpi-card">
         <h2 className="text-xl font-semibold">Desktop App Download</h2>
-        <p className="text-sm text-slate-600 mt-2">
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
           Download the Windows monitoring agent and share this installer with employees.
         </p>
         <div className="mt-4">
@@ -15,7 +15,7 @@ export function DesktopAppPage() {
             Download Agent (.exe)
           </a>
         </div>
-        <div className="mt-4 text-xs text-slate-500 space-y-1">
+        <div className="mt-4 space-y-1 text-xs text-slate-500 dark:text-slate-400">
           <p>
             <span className="font-medium">File:</span> Hybrid-Workforce-Agent-1.0.7.exe
           </p>

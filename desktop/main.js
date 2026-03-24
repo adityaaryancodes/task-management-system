@@ -28,8 +28,44 @@ const API_BASE_URL = (process.env.API_BASE_URL || appConfig.apiBaseUrl || 'https
 const DESKTOP_UI_URL = process.env.DESKTOP_UI_URL || appConfig.desktopUiUrl || 'http://localhost:5174';
 const queuePath = path.join(app.getPath('userData'), 'queue.json');
 const devicePath = path.join(app.getPath('userData'), 'device.json');
+const proofsRoot = path.join(app.getPath('userData'), 'proofs');
 const DEFAULT_ALLOWED_APPS = ['visual studio code', 'code', 'google chrome', 'chrome', 'canva'];
 const DEFAULT_BLOCKED_WINDOW_KEYWORDS = ['youtube', 'whatsapp'];
+
+function normalizeContextToken(input) {
+  return String(input || '')
+    .toLowerCase()
+    .replace(/\.exe$/i, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function isAgentWindow(appName, windowTitle) {
+  const appToken = normalizeContextToken(appName);
+  const titleToken = normalizeContextToken(windowTitle);
+  return (
+    appToken.includes('electron') ||
+    appToken.includes('hybrid workforce') ||
+    titleToken.includes('hybrid workforce agent') ||
+    titleToken.includes('desktop control') ||
+    titleToken.includes('focus cockpit')
+  );
+}
+
+function sanitizeFilename(value) {
+  const cleaned = String(value || 'proof')
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^\.+/, '');
+  return cleaned || 'proof';
+}
+
+function ensureDirectory(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
 
 function parseAllowedApps() {
   const raw = process.env.ALLOWED_APPS;
@@ -73,8 +109,34 @@ function parsePolicyScreenshotCooldownMs() {
 
 let win;
 let tray;
-let state = { tracking: false, loggedIn: false, orgId: null, user: null, deviceId: null };
+const initialState = {
+  tracking: false,
+  loggedIn: false,
+  orgId: null,
+  user: null,
+  deviceId: null,
+  workSessionStartedAt: null,
+  breakActive: false,
+  appName: null,
+  currentWindowTitle: null,
+  focusAppName: null,
+  focusWindowTitle: null,
+  idleSeconds: 0,
+  lastDurationSeconds: 0,
+  lastActivityAt: null,
+  activitySummaryDate: null,
+  activeSecondsToday: 0,
+  idleSecondsToday: 0,
+  syncStatus: 'idle',
+  syncError: null,
+  lastSyncAt: null
+};
+let state = { ...initialState };
 let currentAttendanceId = null;
+
+function currentDayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 async function loadDeviceIdentifier() {
   if (fs.existsSync(devicePath)) return JSON.parse(fs.readFileSync(devicePath, 'utf-8')).deviceIdentifier;
@@ -94,6 +156,40 @@ async function setSession(session) {
 
 async function clearSession() {
   await keytar.deletePassword(SERVICE, ACCOUNT);
+}
+
+async function patchSession(partial) {
+  const session = await getSession();
+  if (!session) return null;
+  const nextSession = { ...session, ...partial };
+  await setSession(nextSession);
+  return nextSession;
+}
+
+function applyFocusContext(previousState, nextState, partial) {
+  if (partial.appName === undefined && partial.currentWindowTitle === undefined) {
+    return nextState;
+  }
+
+  const appName = partial.appName ?? nextState.appName;
+  const windowTitle = partial.currentWindowTitle ?? nextState.currentWindowTitle;
+  if (!appName && !windowTitle) {
+    return nextState;
+  }
+
+  if (isAgentWindow(appName, windowTitle)) {
+    return {
+      ...nextState,
+      focusAppName: previousState.focusAppName || nextState.focusAppName || appName,
+      focusWindowTitle: previousState.focusWindowTitle || nextState.focusWindowTitle || windowTitle
+    };
+  }
+
+  return {
+    ...nextState,
+    focusAppName: appName,
+    focusWindowTitle: windowTitle
+  };
 }
 
 async function refreshAccessToken(session) {
@@ -141,17 +237,27 @@ async function apiRequest(config) {
 async function restoreSessionState() {
   const session = await getSession();
   if (!session) return;
+  currentAttendanceId = session.currentAttendanceId || null;
   state = {
     ...state,
     loggedIn: true,
     orgId: session.orgId,
     user: session.user,
-    deviceId: session.deviceId
+    deviceId: session.deviceId,
+    workSessionStartedAt: session.workSessionStartedAt || null,
+    breakActive: Boolean(session.breakActive)
   };
   if (session.user?.role === 'employee') {
-    tracker.start();
-    state.tracking = true;
-    await ensureAttendanceLogin();
+    if (session.breakActive) {
+      state.tracking = false;
+      state.syncStatus = 'paused';
+    } else {
+      tracker.start();
+      state.tracking = true;
+      if (!session.workSessionStartedAt) {
+        await ensureAttendanceLogin();
+      }
+    }
   }
   updateRenderer();
 }
@@ -166,22 +272,65 @@ async function ensureAttendanceLogin() {
       data: { device_id: session.deviceId }
     });
     currentAttendanceId = res?.data?.id || currentAttendanceId;
+    await patchSession({
+      currentAttendanceId,
+      workSessionStartedAt: res?.data?.login_at || session.workSessionStartedAt || new Date().toISOString(),
+      breakActive: false
+    });
+    state = {
+      ...state,
+      workSessionStartedAt: res?.data?.login_at || session.workSessionStartedAt || state.workSessionStartedAt || new Date().toISOString(),
+      breakActive: false
+    };
+    updateRenderer();
   } catch (err) {
-    if (err?.response?.status !== 409) {
+    if (err?.response?.status === 409) {
+      currentAttendanceId = currentAttendanceId || session.currentAttendanceId || null;
+      await patchSession({
+        currentAttendanceId,
+        workSessionStartedAt: session.workSessionStartedAt || state.workSessionStartedAt || new Date().toISOString(),
+        breakActive: false
+      });
+      state = {
+        ...state,
+        workSessionStartedAt: session.workSessionStartedAt || state.workSessionStartedAt || new Date().toISOString(),
+        breakActive: false
+      };
+      updateRenderer();
+    } else {
       log.error('Attendance login failed', err?.response?.data || err.message);
     }
   }
 }
 
 async function ensureAttendanceLogout() {
-  if (!currentAttendanceId) return;
+  const session = await getSession();
+  const attendanceId = currentAttendanceId || session?.currentAttendanceId;
+  if (!attendanceId) {
+    currentAttendanceId = null;
+    await patchSession({
+      currentAttendanceId: null,
+      workSessionStartedAt: null,
+      breakActive: false
+    });
+    state = { ...state, workSessionStartedAt: null, breakActive: false };
+    updateRenderer();
+    return;
+  }
   try {
     await apiRequest({
       method: 'post',
       url: `${API_BASE_URL}/attendance/logout`,
-      data: { attendance_id: currentAttendanceId }
+      data: { attendance_id: attendanceId }
     });
     currentAttendanceId = null;
+    await patchSession({
+      currentAttendanceId: null,
+      workSessionStartedAt: null,
+      breakActive: false
+    });
+    state = { ...state, workSessionStartedAt: null, breakActive: false };
+    updateRenderer();
   } catch (err) {
     log.error('Attendance logout failed', err?.response?.data || err.message);
   }
@@ -189,8 +338,12 @@ async function ensureAttendanceLogout() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 980,
-    height: 640,
+    width: 1360,
+    height: 860,
+    minWidth: 1160,
+    minHeight: 760,
+    backgroundColor: '#eef4fb',
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -230,7 +383,16 @@ function createTray() {
   tray.on('click', () => win && win.show());
 }
 
-const syncEngine = new SyncEngine({ apiBaseUrl: API_BASE_URL, queuePath, getSession, setSession });
+const syncEngine = new SyncEngine({
+  apiBaseUrl: API_BASE_URL,
+  queuePath,
+  getSession,
+  setSession,
+  onStatus: (partial) => {
+    state = { ...state, ...partial };
+    updateRenderer();
+  }
+});
 const tracker = new Tracker({
   syncEngine,
   powerMonitor,
@@ -241,7 +403,32 @@ const tracker = new Tracker({
   policyAlertCooldownMs: parsePolicyAlertCooldownMs(),
   policyScreenshotCooldownMs: parsePolicyScreenshotCooldownMs(),
   onStatus: (partial) => {
-    state = { ...state, ...partial };
+    let nextState = { ...state, ...partial };
+
+    if (partial.durationSeconds && partial.activityType) {
+      const dayKey = currentDayKey();
+      const summaryDate = state.activitySummaryDate === dayKey ? state.activitySummaryDate : dayKey;
+      let activeSecondsToday = state.activitySummaryDate === dayKey ? state.activeSecondsToday || 0 : 0;
+      let idleSecondsToday = state.activitySummaryDate === dayKey ? state.idleSecondsToday || 0 : 0;
+
+      if (partial.activityType === 'active') {
+        activeSecondsToday += partial.durationSeconds;
+      } else {
+        idleSecondsToday += partial.durationSeconds;
+      }
+
+      nextState = {
+        ...nextState,
+        activitySummaryDate: summaryDate,
+        activeSecondsToday,
+        idleSecondsToday,
+        lastDurationSeconds: partial.durationSeconds
+      };
+    }
+
+    delete nextState.durationSeconds;
+    nextState = applyFocusContext(state, nextState, partial);
+    state = nextState;
     updateRenderer();
   }
 });
@@ -261,14 +448,25 @@ ipcMain.handle('agent:login', async (_, payload) => {
     refreshToken: result.data.refresh_token,
     orgId: result.data.user.org_id,
     user: result.data.user,
-    deviceId: null
+    deviceId: null,
+    currentAttendanceId: null,
+    workSessionStartedAt: null,
+    breakActive: false
   };
 
   const jwtPayload = JSON.parse(Buffer.from(session.accessToken.split('.')[1], 'base64').toString('utf-8'));
   session.deviceId = jwtPayload.device_id;
 
   await setSession(session);
-  state = { ...state, loggedIn: true, orgId: session.orgId, user: session.user, deviceId: session.deviceId };
+  state = {
+    ...state,
+    loggedIn: true,
+    orgId: session.orgId,
+    user: session.user,
+    deviceId: session.deviceId,
+    breakActive: false,
+    syncError: null
+  };
   if (session.user?.role === 'employee') {
     tracker.start();
     state.tracking = true;
@@ -282,15 +480,21 @@ ipcMain.handle('agent:logout', async () => {
   tracker.stop();
   await ensureAttendanceLogout();
   await clearSession();
-  state = { tracking: false, loggedIn: false, orgId: null, user: null, deviceId: null };
+  state = { ...initialState };
   updateRenderer();
   return { ok: true };
 });
 
 ipcMain.handle('agent:start', async () => {
+  const session = await getSession();
+  if (!session) return { ok: false, message: 'Not logged in' };
   tracker.start();
-  await ensureAttendanceLogin();
-  state = { ...state, tracking: true };
+  if (!session.workSessionStartedAt) {
+    await ensureAttendanceLogin();
+  } else {
+    await patchSession({ breakActive: false });
+  }
+  state = { ...state, tracking: true, breakActive: false };
   updateRenderer();
   return { ok: true, state };
 });
@@ -298,7 +502,40 @@ ipcMain.handle('agent:start', async () => {
 ipcMain.handle('agent:stop', async () => {
   tracker.stop();
   await ensureAttendanceLogout();
-  state = { ...state, tracking: false };
+  state = { ...state, tracking: false, breakActive: false };
+  updateRenderer();
+  return { ok: true, state };
+});
+
+ipcMain.handle('agent:break:start', async () => {
+  const session = await getSession();
+  if (!session) return { ok: false, message: 'Not logged in' };
+
+  tracker.stop();
+  await patchSession({ breakActive: true });
+  state = {
+    ...state,
+    tracking: false,
+    breakActive: true,
+    workSessionStartedAt: state.workSessionStartedAt || session.workSessionStartedAt || new Date().toISOString(),
+    syncStatus: 'paused'
+  };
+  updateRenderer();
+  return { ok: true, state };
+});
+
+ipcMain.handle('agent:break:end', async () => {
+  const session = await getSession();
+  if (!session) return { ok: false, message: 'Not logged in' };
+
+  tracker.start();
+  await patchSession({ breakActive: false });
+  state = {
+    ...state,
+    tracking: true,
+    breakActive: false,
+    workSessionStartedAt: state.workSessionStartedAt || session.workSessionStartedAt || new Date().toISOString()
+  };
   updateRenderer();
   return { ok: true, state };
 });
@@ -306,10 +543,27 @@ ipcMain.handle('agent:stop', async () => {
 ipcMain.handle('agent:status', async () => {
   const session = await getSession();
   if (session && !state.loggedIn) {
-    state = { ...state, loggedIn: true, orgId: session.orgId, user: session.user, deviceId: session.deviceId };
+    state = {
+      ...state,
+      loggedIn: true,
+      orgId: session.orgId,
+      user: session.user,
+      deviceId: session.deviceId,
+      workSessionStartedAt: session.workSessionStartedAt || null,
+      breakActive: Boolean(session.breakActive)
+    };
     if (session.user?.role === 'employee') {
-      tracker.start();
-      state.tracking = true;
+      currentAttendanceId = session.currentAttendanceId || null;
+      if (session.breakActive) {
+        state.tracking = false;
+        state.syncStatus = 'paused';
+      } else {
+        tracker.start();
+        state.tracking = true;
+        if (!session.workSessionStartedAt) {
+          await ensureAttendanceLogin();
+        }
+      }
     }
   }
   return state;
@@ -338,6 +592,41 @@ ipcMain.handle('agent:updateTask', async (_, payload) => {
     return { ok: true, data: res.data };
   } catch (err) {
     return { ok: false, message: err?.response?.data?.message || err.message };
+  }
+});
+
+ipcMain.handle('agent:saveProof', async (_, payload) => {
+  try {
+    const session = await getSession();
+    if (!session) return { ok: false, message: 'Not logged in' };
+
+    const sourcePath = payload?.filePath;
+    if (!sourcePath || !fs.existsSync(sourcePath)) {
+      return { ok: false, message: 'Selected file could not be read from disk' };
+    }
+
+    const originalName = sanitizeFilename(payload?.fileName || path.basename(sourcePath));
+    const targetDir = path.join(proofsRoot, session.orgId || 'org', session.user?.id || 'user');
+    ensureDirectory(targetDir);
+
+    const storedName = `${Date.now()}-${originalName}`;
+    const targetPath = path.join(targetDir, storedName);
+    fs.copyFileSync(sourcePath, targetPath);
+    const stats = fs.statSync(targetPath);
+
+    return {
+      ok: true,
+      data: {
+        id: uuidv4(),
+        originalName,
+        storedName,
+        localPath: targetPath,
+        sizeBytes: stats.size,
+        savedAt: new Date().toISOString()
+      }
+    };
+  } catch (err) {
+    return { ok: false, message: err?.message || 'Failed to save proof locally' };
   }
 });
 

@@ -135,8 +135,8 @@ export function TaskManagementPage() {
               {loading ? 'Assigning...' : 'Assign Task'}
             </button>
           </div>
-          {error ? <p className="md:col-span-2 text-sm text-red-600">{error}</p> : null}
-          {success ? <p className="md:col-span-2 text-sm text-green-700">{success}</p> : null}
+          {error ? <p className="md:col-span-2 text-sm text-red-600 dark:text-red-300">{error}</p> : null}
+          {success ? <p className="md:col-span-2 text-sm text-green-700 dark:text-green-300">{success}</p> : null}
         </form>
       </div>
 
@@ -146,11 +146,11 @@ export function TaskManagementPage() {
           {tasks.map((task) => (
             <div key={task.id} className="border border-slate-200 rounded-lg p-3">
               <p className="font-medium">{task.title}</p>
-              <p className="text-sm text-slate-600 mt-1">{task.description || 'No description'}</p>
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{task.description || 'No description'}</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                 Assignee: {employeeMap[task.assignee_user_id] || task.assignee_user_id}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Not set'}
               </p>
               <div className="mt-2 flex items-center gap-2">
@@ -164,11 +164,11 @@ export function TaskManagementPage() {
                   <option value="in_progress">in_progress</option>
                   <option value="completed">completed</option>
                 </select>
-                <span className="text-xs text-slate-500">Current: {task.status}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Current: {task.status}</span>
               </div>
             </div>
           ))}
-          {!tasks.length ? <p className="text-sm text-slate-500">No tasks yet.</p> : null}
+          {!tasks.length ? <p className="text-sm text-slate-500 dark:text-slate-400">No tasks yet.</p> : null}
         </div>
       </div>
     </div>

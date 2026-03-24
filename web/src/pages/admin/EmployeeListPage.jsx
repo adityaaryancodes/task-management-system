@@ -115,10 +115,10 @@ export function EmployeeListPage() {
             <button className="rounded-lg bg-brand-500 text-white px-4 py-2 text-sm" disabled={loading}>
               {loading ? 'Creating...' : 'Create Employee'}
             </button>
-            <p className="text-xs text-slate-500">Role will be set to employee. Password must be 8+ characters.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Role will be set to employee. Password must be 8+ characters.</p>
           </div>
-          {error ? <p className="md:col-span-2 text-sm text-red-600">{error}</p> : null}
-          {success ? <p className="md:col-span-2 text-sm text-green-700">{success}</p> : null}
+          {error ? <p className="md:col-span-2 text-sm text-red-600 dark:text-red-300">{error}</p> : null}
+          {success ? <p className="md:col-span-2 text-sm text-green-700 dark:text-green-300">{success}</p> : null}
         </form>
       </div>
 
@@ -127,7 +127,7 @@ export function EmployeeListPage() {
         <div className="overflow-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-slate-500">
+              <tr className="text-left text-slate-500 dark:text-slate-400">
                 <th className="pb-3">Name</th>
                 <th className="pb-3">Email</th>
                 <th className="pb-3">Role</th>

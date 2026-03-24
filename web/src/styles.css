@@ -2,10 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Segoe UI', sans-serif;
+:root {
+  --app-bg: #eef4ff;
+  --app-bg-gradient: radial-gradient(circle at top, #ffffff 0%, #edf4ff 44%, #d8e6ff 100%);
+  --app-text: #0f172a;
+  --app-muted: #64748b;
+  --app-border: #d9e3f2;
+  --app-card-bg: rgba(255, 255, 255, 0.92);
+  --app-card-border: rgba(191, 219, 254, 0.9);
+  --app-card-shadow: 0 24px 60px rgba(148, 163, 184, 0.2);
+  --app-input-bg: rgba(255, 255, 255, 0.96);
+  --app-input-border: #cbd5e1;
+  --app-input-text: #0f172a;
+  --app-subtle-bg: rgba(241, 245, 249, 0.92);
+  --app-subtle-border: #d7e3f4;
 }
 
-.kpi-card {
-  @apply bg-white rounded-xl p-4 shadow-sm border border-slate-200;
+html[data-theme='dark'],
+body[data-theme='dark'],
+#root[data-theme='dark'] {
+  --app-bg: #020617;
+  --app-bg-gradient: radial-gradient(circle at top, #111827 0%, #020617 52%, #01030f 100%);
+  --app-text: #e2e8f0;
+  --app-muted: #94a3b8;
+  --app-border: #1e293b;
+  --app-card-bg: rgba(15, 23, 42, 0.94);
+  --app-card-border: rgba(30, 41, 59, 0.96);
+  --app-card-shadow: 0 28px 70px rgba(2, 6, 23, 0.6);
+  --app-input-bg: rgba(15, 23, 42, 0.98);
+  --app-input-border: #334155;
+  --app-input-text: #f8fafc;
+  --app-subtle-bg: rgba(2, 6, 23, 0.55);
+  --app-subtle-border: #1f2c42;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--app-bg-gradient);
+    color: var(--app-text);
+    @apply antialiased transition-colors duration-300;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  html.dark body {
+    background: var(--app-bg-gradient);
+    color: var(--app-text);
+  }
+
+  input,
+  select,
+  textarea {
+    border-color: var(--app-input-border);
+    background: var(--app-input-bg);
+    color: var(--app-input-text);
+    @apply rounded-lg border px-3 py-2 shadow-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--app-muted);
+  }
+}
+
+@layer components {
+  .kpi-card {
+    border-color: var(--app-card-border);
+    background: var(--app-card-bg);
+    box-shadow: var(--app-card-shadow);
+    color: var(--app-text);
+    @apply rounded-[24px] border p-5 backdrop-blur transition-colors duration-300;
+  }
+
+  .surface-subtle {
+    border-color: var(--app-subtle-border);
+    background: var(--app-subtle-bg);
+    color: var(--app-text);
+    @apply rounded-2xl border transition-colors duration-300;
+  }
 }

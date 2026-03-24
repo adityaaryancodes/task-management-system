@@ -149,7 +149,16 @@ class Tracker {
       now
     }).catch(() => {});
 
-    this.onStatus && this.onStatus({ tracking: true, idleSeconds: idle, appName });
+    this.onStatus &&
+      this.onStatus({
+        tracking: true,
+        idleSeconds: idle,
+        appName,
+        currentWindowTitle: windowTitle,
+        activityType,
+        durationSeconds: duration,
+        lastActivityAt: new Date(now).toISOString()
+      });
   }
 
   async captureScreenshot() {
@@ -185,6 +194,7 @@ class Tracker {
     if (this.activityTimer) return;
     this.lastTick = Date.now();
     this.captureScreenshot();
+    this.collectActivity().catch(() => {});
     this.activityTimer = setInterval(() => this.collectActivity(), 10000);
     this.screenshotTimer = setInterval(() => this.captureScreenshot(), 15 * 60 * 1000);
     this.syncEngine.start();

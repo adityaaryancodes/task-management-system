@@ -101,17 +101,17 @@ export function ScreenshotViewerPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Screenshot Viewer</h2>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-red-600 dark:text-red-300">{error}</p> : null}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {shots.map((shot) => (
           <div key={shot.id} className="kpi-card">
             <p className="text-sm font-medium text-slate-800">{shot.full_name || shot.email || shot.user_id}</p>
-            <p className="text-xs text-slate-500">{shot.email || 'Employee screenshot'}</p>
-            <p className="text-sm text-slate-500">{new Date(shot.captured_at).toLocaleString()}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{shot.email || 'Employee screenshot'}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{new Date(shot.captured_at).toLocaleString()}</p>
             {urls[shot.id] ? (
               <img className="mt-3 w-full h-44 object-cover rounded-lg border border-slate-200 bg-slate-100" src={urls[shot.id]} alt="screenshot preview" loading="lazy" />
             ) : (
-              <div className="mt-3 w-full h-44 rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center text-sm text-slate-500">
+              <div className="mt-3 flex h-44 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
                 {pending[shot.id] ? 'Loading screenshot...' : 'Screenshot preview unavailable'}
               </div>
             )}

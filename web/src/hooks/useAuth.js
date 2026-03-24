@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { clearSession, getUser } from '../lib/auth';
+import { getUser, signOutSession } from '../lib/auth';
 
 export function useAuthState() {
   const [user, setUser] = useState(getUser());
   const isAuthed = useMemo(() => !!user, [user]);
-  const logout = () => {
-    clearSession();
+  const logout = async () => {
+    await signOutSession();
     setUser(null);
   };
   return { user, setUser, isAuthed, logout };

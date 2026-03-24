@@ -15,11 +15,11 @@ export function AttendanceLogsPage() {
   return (
     <div className="kpi-card">
       <h2 className="text-xl font-semibold mb-4">Attendance Logs</h2>
-      {error ? <p className="text-sm text-red-600 mb-3">{error}</p> : null}
+      {error ? <p className="mb-3 text-sm text-red-600 dark:text-red-300">{error}</p> : null}
       <div className="overflow-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-slate-500">
+            <tr className="text-left text-slate-500 dark:text-slate-400">
               <th>User</th>
               <th>Login</th>
               <th>Logout</th>

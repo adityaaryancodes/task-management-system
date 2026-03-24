@@ -4,12 +4,17 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 class SyncEngine {
-  constructor({ apiBaseUrl, queuePath, getSession, setSession }) {
+  constructor({ apiBaseUrl, queuePath, getSession, setSession, onStatus }) {
     this.apiBaseUrl = apiBaseUrl;
     this.queuePath = queuePath;
     this.getSession = getSession;
     this.setSession = setSession;
+    this.onStatus = onStatus;
     this.timer = null;
+  }
+
+  emitStatus(partial) {
+    if (this.onStatus) this.onStatus(partial);
   }
 
   async requestWithAuth(config) {
@@ -17,7 +22,7 @@ class SyncEngine {
     if (!session) throw new Error('Not logged in');
 
     try {
-      return await axios({
+      const response = await axios({
         timeout: 20000,
         ...config,
         headers: {
@@ -26,12 +31,14 @@ class SyncEngine {
           'x-org-id': session.orgId
         }
       });
+      this.emitStatus({ syncStatus: 'connected', lastSyncAt: new Date().toISOString(), syncError: null });
+      return response;
     } catch (err) {
       if (err?.response?.status === 401 && session.refreshToken) {
         const refresh = await axios.post(`${this.apiBaseUrl}/auth/refresh`, { refresh_token: session.refreshToken }, { timeout: 10000 });
         session.accessToken = refresh.data.access_token;
         if (this.setSession) await this.setSession(session);
-        return axios({
+        const response = await axios({
           timeout: 20000,
           ...config,
           headers: {
@@ -40,7 +47,13 @@ class SyncEngine {
             'x-org-id': session.orgId
           }
         });
+        this.emitStatus({ syncStatus: 'connected', lastSyncAt: new Date().toISOString(), syncError: null });
+        return response;
       }
+      this.emitStatus({
+        syncStatus: 'offline',
+        syncError: err?.response?.data?.message || err.message || 'Sync failed'
+      });
       throw err;
     }
   }
@@ -133,12 +146,14 @@ class SyncEngine {
 
   start() {
     if (this.timer) return;
+    this.emitStatus({ syncStatus: 'syncing', syncError: null });
     this.timer = setInterval(() => this.flushActivity(), 60000);
   }
 
   stop() {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    this.emitStatus({ syncStatus: 'paused' });
   }
 }
 

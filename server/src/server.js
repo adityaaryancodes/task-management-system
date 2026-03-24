@@ -15,7 +15,7 @@ startNightlyAggregation();
 
 let isShuttingDown = false;
 const shutdown = async (signal) => {
-  if (isShuttingDown) return;cv
+  if (isShuttingDown) return; 
   isShuttingDown = true;
   console.log(`Received ${signal}. Shutting down server`);
 

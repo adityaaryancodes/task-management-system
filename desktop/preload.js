@@ -6,7 +6,14 @@ contextBridge.exposeInMainWorld('agent', {
   getStatus: () => ipcRenderer.invoke('agent:status'),
   startTracking: () => ipcRenderer.invoke('agent:start'),
   stopTracking: () => ipcRenderer.invoke('agent:stop'),
+  startBreak: () => ipcRenderer.invoke('agent:break:start'),
+  endBreak: () => ipcRenderer.invoke('agent:break:end'),
   getTasks: () => ipcRenderer.invoke('agent:getTasks'),
   updateTask: (taskId, status) => ipcRenderer.invoke('agent:updateTask', { taskId, status }),
-  onStatus: (cb) => ipcRenderer.on('agent:status-update', (_, state) => cb(state))
+  saveProof: (payload) => ipcRenderer.invoke('agent:saveProof', payload),
+  onStatus: (cb) => {
+    const listener = (_, state) => cb(state);
+    ipcRenderer.on('agent:status-update', listener);
+    return () => ipcRenderer.removeListener('agent:status-update', listener);
+  }
 });

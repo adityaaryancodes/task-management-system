@@ -151,4 +151,27 @@ router.post('/refresh', authRateLimit, async (req, res) => {
   }
 });
 
+const logoutSchema = Joi.object({
+  refresh_token: Joi.string().required()
+});
+
+router.post('/logout', authRateLimit, async (req, res, next) => {
+  try {
+    const { error, value } = validate(logoutSchema, req.body);
+    if (error) return res.status(400).json({ message: 'Validation failed', errors: error });
+
+    await query(
+      `UPDATE user_refresh_tokens
+       SET revoked_at = COALESCE(revoked_at, NOW())
+       WHERE revoked_at IS NULL
+         AND token_hash = crypt($1, token_hash)`,
+      [value.refresh_token]
+    );
+
+    return res.status(204).send();
+  } catch (err) {
+    return next(err);
+  }
+});
+
 export default router;

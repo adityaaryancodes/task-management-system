@@ -24,7 +24,7 @@ router.post('/', authRequired, validateOrgScope, requireRole('owner', 'manager')
     const created = await query(
       `INSERT INTO tasks (id, org_id, assignee_user_id, created_by_user_id, title, description, due_date)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, org_id, assignee_user_id, created_by_user_id, title, description, status, due_date, created_at`,
+       RETURNING id, org_id, assignee_user_id, created_by_user_id, title, description, status, due_date, completed_at, created_at`,
       [uuidv4(), req.orgId, value.assignee_user_id, req.user.sub, value.title, value.description || null, value.due_date || null]
     );
 
@@ -50,7 +50,7 @@ router.get('/', authRequired, validateOrgScope, async (req, res, next) => {
     }
 
     const rows = await query(
-      `SELECT id, org_id, assignee_user_id, created_by_user_id, title, description, status, due_date, created_at
+      `SELECT id, org_id, assignee_user_id, created_by_user_id, title, description, status, due_date, completed_at, created_at
        FROM tasks
        WHERE ${filter}
        ORDER BY created_at DESC
@@ -97,7 +97,7 @@ router.patch('/:id', authRequired, validateOrgScope, async (req, res, next) => {
     if (value.status !== undefined) {
       params.push(value.status);
       fields.push(`status = $${params.length}`);
-      if (value.status === 'completed') fields.push('completed_at = NOW()');
+      fields.push(value.status === 'completed' ? 'completed_at = NOW()' : 'completed_at = NULL');
     }
     if (value.due_date !== undefined) {
       params.push(value.due_date || null);
@@ -108,7 +108,7 @@ router.patch('/:id', authRequired, validateOrgScope, async (req, res, next) => {
       `UPDATE tasks
        SET ${fields.join(', ')}, updated_at = NOW()
        WHERE id = $1 AND org_id = $2
-       RETURNING id, title, description, status, due_date, updated_at`,
+       RETURNING id, title, description, status, due_date, completed_at, updated_at`,
       params
     );
     return res.json(updated.rows[0]);
@@ -118,4 +118,3 @@ router.patch('/:id', authRequired, validateOrgScope, async (req, res, next) => {
 });
 
 export default router;
-
